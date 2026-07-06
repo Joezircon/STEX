@@ -2,55 +2,34 @@
 
 **Stencil Topology Editor eXperimental**
 
----
-
-## Mission
-
 STEX is a desktop application for transforming artwork into structurally sound, manufacturable stencils while preserving the artist's original vision.
 
-Unlike traditional image editors, STEX understands stencil topology.
+## Core Idea
 
-It detects unsupported white islands, helps artists add supports ("ribs"), and exports cut-ready artwork for Cricut, laser cutters, vinyl cutters, and more.
+White represents stencil material that remains.  
+Black represents cutout space.  
 
----
+STEX detects unsupported white islands and helps artists add intentional supports called **ribs**.
 
-## Current Status
+## Project Status
 
-🚧 Early Development
-
----
+Early development.
 
 ## Planned Features
 
 - White Island Detection
 - Rib Sketch Tool
-- Feature Selection
+- Paint Selection
 - Feature Tree
-- Smart Support Suggestions
+- Smart Rib Suggestions
 - SVG Export
 - Cricut Export
 - Multi-color Stencils
-- Project Files (.stex)
-
----
+- `.stex` Project Files
+- Synthwave / graffiti-energy UI
+- Ribot mascot
 
 ## Philosophy
 
-The artist is always in control.
-
-STEX suggests.
-
+STEX suggests.  
 The artist decides.
-
----
-
-## Visual Identity
-
-- Graffiti Energy
-- Synthwave Lighting
-- Neon Color Palette
-- Ribot Mascot
-
----
-
-Created by Joezircon and ChatGPT.
