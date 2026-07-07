@@ -1,0 +1,44 @@
+name: Build Windows STEX
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build STEX.exe
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --name STEX src/stex/main.py
+
+      - name: Copy examples and docs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package
+          Copy-Item dist/STEX.exe package/STEX.exe
+          if (Test-Path examples) { Copy-Item examples package/examples -Recurse }
+          if (Test-Path docs) { Copy-Item docs package/docs -Recurse }
+          if (Test-Path README.md) { Copy-Item README.md package/README.md }
+
+      - name: Upload STEX Windows Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: STEX-Windows-Build
+          path: package
