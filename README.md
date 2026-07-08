@@ -4,32 +4,39 @@
 
 STEX is a desktop application for transforming artwork into structurally sound, manufacturable stencils while preserving the artist's original vision.
 
-## Core Idea
+## Current Alpha Goal
 
-White represents stencil material that remains.  
-Black represents cutout space.  
+Load a black/white stencil image, inspect it, detect unsupported white islands, and show the result visually.
 
-STEX detects unsupported white islands and helps artists add intentional supports called **ribs**.
+## Current Features
 
-## Project Status
+- Arcade/synthwave-style interface
+- Insert image
+- Zoom and pan canvas
+- Forge white-island detection engine
+- Topology Check
+- Red overlay boxes around unsupported white islands
+- Example test image
 
-Early development.
+## Core Rule
 
-## Planned Features
+White = stencil material that remains.  
+Black = cutout space.  
 
-- White Island Detection
-- Rib Sketch Tool
-- Paint Selection
-- Feature Tree
-- Smart Rib Suggestions
-- SVG Export
-- Cricut Export
-- Multi-color Stencils
-- `.stex` Project Files
-- Synthwave / graffiti-energy UI
-- Ribot mascot
+White islands are failures.  
+Black islands are acceptable.
 
-## Philosophy
+## Automatic Windows Build
+
+This repo includes a GitHub Actions workflow at:
+
+`.github/workflows/windows-build.yml`
+
+When changes are pushed to `main`, GitHub should build a Windows executable artifact named:
+
+`STEX-Windows-Build`
+
+## STEX Philosophy
 
 STEX suggests.  
 The artist decides.
