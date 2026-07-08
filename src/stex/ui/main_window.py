@@ -5,8 +5,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from ..canvas.canvas_view import CanvasView
-from ..core.forge import ForgeEngine
+from src.stex.canvas.canvas_view import CanvasView
+from src.stex.core.forge import ForgeEngine
 
 
 class MainWindow(QMainWindow):
@@ -50,9 +50,12 @@ class MainWindow(QMainWindow):
         main_layout = QHBoxLayout()
         central.setLayout(main_layout)
 
-        self.sidebar = self._build_sidebar()
+        # Important: create canvas BEFORE sidebar.
+        # The sidebar buttons connect to self.canvas methods.
         self.canvas = CanvasView()
         self.canvas.status_changed.connect(self._canvas_status)
+
+        self.sidebar = self._build_sidebar()
 
         main_layout.addWidget(self.sidebar, 0)
         main_layout.addWidget(self.canvas, 1)
