@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QImage, QPixmap
-from PySide6.QtCore import Qt, Signal, QPointF
+from PySide6.QtCore import Qt, Signal, QPointF, QRectF
 
 
 class CanvasView(QWidget):
@@ -26,6 +26,9 @@ class CanvasView(QWidget):
             return False
 
         self.pixmap = QPixmap.fromImage(image)
+        if self.pixmap.isNull():
+            return False
+
         self.image_path = path
         self.forge_report = None
         self.reset_view()
@@ -83,10 +86,38 @@ class CanvasView(QWidget):
         if self.pixmap is None:
             self._draw_placeholder(painter)
         else:
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
-            target = self._image_target_rect()
-            painter.drawPixmap(target, self.pixmap)
+            self._draw_image(painter)
             self._draw_forge_overlay(painter)
+
+    def _draw_image(self, painter):
+        """
+        Robust image drawing path.
+
+        Previous build used a drawPixmap QRectF overload that could fail silently
+        after packaging. This version scales explicitly and draws at an integer
+        point, which is more reliable in the Windows EXE.
+        """
+        target_w = max(1, int(self.pixmap.width() * self.zoom))
+        target_h = max(1, int(self.pixmap.height() * self.zoom))
+
+        scaled = self.pixmap.scaled(
+            target_w,
+            target_h,
+            Qt.KeepAspectRatio,
+            Qt.FastTransformation
+        )
+
+        x = int(self.pan.x())
+        y = int(self.pan.y())
+
+        painter.drawPixmap(x, y, scaled)
+
+        # Visible diagnostic border around the loaded image.
+        image_border = QPen(QColor("#39ff14"))
+        image_border.setWidth(2)
+        painter.setPen(image_border)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRect(x, y, scaled.width(), scaled.height())
 
     def _draw_grid(self, painter):
         pen = QPen(QColor("#151530"))
@@ -108,7 +139,6 @@ class CanvasView(QWidget):
         painter.drawText(self.rect(), Qt.AlignCenter, "INSERT IMAGE\n\nTO BEGIN")
 
     def _image_target_rect(self):
-        from PySide6.QtCore import QRectF
         return QRectF(
             self.pan.x(),
             self.pan.y(),
@@ -142,13 +172,13 @@ class CanvasView(QWidget):
             sw = w * self.zoom
             sh = h * self.zoom
 
-            painter.drawRect(sx, sy, sw, sh)
+            painter.drawRect(int(sx), int(sy), int(sw), int(sh))
 
             if problem.centroid:
                 cx, cy = problem.centroid
                 tx = self.pan.x() + cx * self.zoom
                 ty = self.pan.y() + cy * self.zoom
-                painter.drawText(tx, ty, str(index))
+                painter.drawText(int(tx), int(ty), str(index))
 
         painter.restore()
 
@@ -203,6 +233,7 @@ class CanvasView(QWidget):
         status = (
             f"IMAGE: {self.pixmap.width()} x {self.pixmap.height()} px"
             f"  |  ZOOM: {self.zoom * 100:.1f}%"
+            f"  |  PAN: {int(self.pan.x())}, {int(self.pan.y())}"
         )
 
         if mouse_pos is not None:
