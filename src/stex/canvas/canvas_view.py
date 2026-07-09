@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QImage, QPixmap
-from PySide6.QtCore import Qt, Signal, QPointF, QRectF
+from PySide6.QtCore import Qt, Signal, QPointF
 
 
 class CanvasView(QWidget):
@@ -76,6 +76,44 @@ class CanvasView(QWidget):
 
         self.update()
         self._emit_status()
+
+    def zoom_to_selected_problem(self):
+        if self.selected_problem is None:
+            self.status_changed.emit("NO ISLAND SELECTED  |  CLICK A RED ISLAND FIRST")
+            return False
+        return self.zoom_to_problem(self.selected_problem)
+
+    def zoom_to_problem(self, problem):
+        if self.pixmap is None or problem is None or not problem.bbox:
+            return False
+
+        x, y, w, h = problem.bbox
+        margin_px = 80
+
+        target_w = max(1, w + margin_px)
+        target_h = max(1, h + margin_px)
+
+        available_w = max(1, self.width() - 120)
+        available_h = max(1, self.height() - 120)
+
+        self.zoom = min(
+            available_w / target_w,
+            available_h / target_h,
+            8.0
+        )
+        self.zoom = max(self.zoom, 0.05)
+
+        cx = x + w / 2
+        cy = y + h / 2
+
+        self.pan = QPointF(
+            self.width() / 2 - cx * self.zoom,
+            self.height() / 2 - cy * self.zoom
+        )
+
+        self.update()
+        self._emit_status()
+        return True
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -195,6 +233,12 @@ class CanvasView(QWidget):
 
         self.update()
         self._emit_status()
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._select_problem_at(event.position())
+            if self.selected_problem:
+                self.zoom_to_selected_problem()
 
     def mousePressEvent(self, event):
         if event.button() in (Qt.RightButton, Qt.MiddleButton):

@@ -89,12 +89,14 @@ class MainWindow(QMainWindow):
         btn_insert = QPushButton("INSERT IMAGE")
         btn_reset = QPushButton("RESET VIEW")
         btn_topology = QPushButton("TOPOLOGY CHECK")
+        btn_zoom_selected = QPushButton("ZOOM SELECTED")
         btn_clear = QPushButton("CLEAR OVERLAY")
         btn_export = QPushButton("EXPORT")
 
         btn_insert.clicked.connect(self.insert_image)
         btn_reset.clicked.connect(self.canvas.reset_view)
         btn_topology.clicked.connect(self.topology_check)
+        btn_zoom_selected.clicked.connect(self.zoom_selected)
         btn_clear.clicked.connect(self.clear_overlay)
         btn_export.clicked.connect(lambda: self._log("EXPORT selected. Export comes later."))
 
@@ -107,7 +109,8 @@ class MainWindow(QMainWindow):
             "ALPHA 0.1\n\n"
             "1. INSERT IMAGE\n"
             "2. TOPOLOGY CHECK\n"
-            "3. CLICK RED ISLAND\n\n"
+            "3. CLICK RED ISLAND\n"
+            "4. ZOOM SELECTED\n\n"
             "STATUS: READY"
         )
 
@@ -117,6 +120,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(btn_insert)
         layout.addWidget(btn_reset)
         layout.addWidget(btn_topology)
+        layout.addWidget(btn_zoom_selected)
         layout.addWidget(btn_clear)
         layout.addWidget(btn_export)
         layout.addSpacing(15)
@@ -166,7 +170,7 @@ class MainWindow(QMainWindow):
             self._log("RIBOT: (^_^)\nSTEX VERIFIED.")
             self.statusBar().showMessage("CUT READY  |  ZERO WHITE ISLANDS  |  STEX VERIFIED")
         else:
-            self._log(f"RIBOT: (>_<)\nCLICK A RED ISLAND TO SELECT IT.")
+            self._log("RIBOT: (>_<)\nCLICK A RED ISLAND TO SELECT IT.")
             self.statusBar().showMessage(
                 f"NOT CUT READY  |  {report.white_island_count} WHITE ISLAND(S)  |  CLICK ISLAND TO SELECT"
             )
@@ -178,6 +182,13 @@ class MainWindow(QMainWindow):
             f"bbox={problem.bbox}\n"
             f"center={problem.centroid}"
         )
+
+    def zoom_selected(self):
+        ok = self.canvas.zoom_to_selected_problem()
+        if ok:
+            self._log("ZOOMED TO SELECTED ISLAND.")
+        else:
+            self._log("NO ISLAND SELECTED.")
 
     def clear_overlay(self):
         self.canvas.clear_forge_report()
