@@ -1,6 +1,3 @@
-from pathlib import Path
-import sys
-
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
     QLabel, QTextEdit, QStatusBar, QFrame, QFileDialog
@@ -67,7 +64,7 @@ class MainWindow(QMainWindow):
 
     def _build_sidebar(self):
         panel = QFrame()
-        panel.setFixedWidth(320)
+        panel.setFixedWidth(300)
         panel.setStyleSheet("""
             QFrame {
                 background-color: #0b0b18;
@@ -89,18 +86,12 @@ class MainWindow(QMainWindow):
         subtitle.setStyleSheet("color: #00f5ff;")
 
         btn_insert = QPushButton("INSERT IMAGE")
-        btn_grid = QPushButton("LOAD GRID TEST")
-        btn_shark = QPushButton("LOAD SHARK TEST")
-        btn_complex = QPushButton("LOAD COMPLEX TEST")
         btn_reset = QPushButton("RESET VIEW")
         btn_topology = QPushButton("TOPOLOGY CHECK")
         btn_clear = QPushButton("CLEAR OVERLAY")
         btn_export = QPushButton("EXPORT")
 
         btn_insert.clicked.connect(self.insert_image)
-        btn_grid.clicked.connect(lambda: self.load_example("calibration/100_Numbered_Grid.png"))
-        btn_shark.clicked.connect(lambda: self.load_example("complex_tests/complex_003_shark_mouth_teeth_problem.png"))
-        btn_complex.clicked.connect(lambda: self.load_example("complex_tests/complex_004_graffiti_splatter_mixed.png"))
         btn_reset.clicked.connect(self.canvas.reset_view)
         btn_topology.clicked.connect(self.topology_check)
         btn_clear.clicked.connect(self.clear_overlay)
@@ -112,10 +103,10 @@ class MainWindow(QMainWindow):
         self.log.setText(
             "RIBOT: (^_^)\n"
             "WELCOME TO STEX.\n\n"
-            "ALPHA 0.1 TEST BUILD\n\n"
-            "LOAD GRID TEST\n"
-            "LOAD SHARK TEST\n"
-            "TOPOLOGY CHECK\n\n"
+            "ALPHA 0.1\n\n"
+            "1. INSERT IMAGE\n"
+            "2. ZOOM / PAN\n"
+            "3. TOPOLOGY CHECK\n\n"
             "STATUS: READY"
         )
 
@@ -123,9 +114,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(subtitle)
         layout.addSpacing(15)
         layout.addWidget(btn_insert)
-        layout.addWidget(btn_grid)
-        layout.addWidget(btn_shark)
-        layout.addWidget(btn_complex)
         layout.addWidget(btn_reset)
         layout.addWidget(btn_topology)
         layout.addWidget(btn_clear)
@@ -134,30 +122,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.log, 1)
 
         return panel
-
-    def app_root(self) -> Path:
-        """
-        Return the folder containing STEX.exe when packaged,
-        or the repository root when running from source.
-        """
-        if getattr(sys, "frozen", False):
-            return Path(sys.executable).resolve().parent
-        return Path.cwd()
-
-    def load_example(self, relative_path: str):
-        path = self.app_root() / "examples" / relative_path
-
-        if not path.exists():
-            self._log(f"EXAMPLE NOT FOUND:\n{path}")
-            self._log("RIBOT: (>_<)\nAdd examples folder beside STEX.exe or rebuild with examples.")
-            return
-
-        ok = self.canvas.load_image(str(path))
-        if ok:
-            self._log(f"LOADED EXAMPLE:\n{relative_path}")
-            self._log("RIBOT: (•_•)\nREADY FOR TOPOLOGY CHECK.")
-        else:
-            self._log(f"FAILED TO LOAD EXAMPLE:\n{relative_path}")
 
     def insert_image(self):
         filename, _ = QFileDialog.getOpenFileName(
