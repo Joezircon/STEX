@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
 
         self.canvas = CanvasView()
         self.canvas.status_changed.connect(self._canvas_status)
+        self.canvas.problem_selected.connect(self.problem_selected)
 
         self.sidebar = self._build_sidebar()
 
@@ -105,8 +106,8 @@ class MainWindow(QMainWindow):
             "WELCOME TO STEX.\n\n"
             "ALPHA 0.1\n\n"
             "1. INSERT IMAGE\n"
-            "2. ZOOM / PAN\n"
-            "3. TOPOLOGY CHECK\n\n"
+            "2. TOPOLOGY CHECK\n"
+            "3. CLICK RED ISLAND\n\n"
             "STATUS: READY"
         )
 
@@ -165,10 +166,18 @@ class MainWindow(QMainWindow):
             self._log("RIBOT: (^_^)\nSTEX VERIFIED.")
             self.statusBar().showMessage("CUT READY  |  ZERO WHITE ISLANDS  |  STEX VERIFIED")
         else:
-            self._log(f"RIBOT: (>_<)\nMISSION: ELIMINATE {report.white_island_count} WHITE ISLAND(S).")
+            self._log(f"RIBOT: (>_<)\nCLICK A RED ISLAND TO SELECT IT.")
             self.statusBar().showMessage(
-                f"NOT CUT READY  |  {report.white_island_count} WHITE ISLAND(S)"
+                f"NOT CUT READY  |  {report.white_island_count} WHITE ISLAND(S)  |  CLICK ISLAND TO SELECT"
             )
+
+    def problem_selected(self, problem):
+        self._log(
+            f"SELECTED {problem.label}\n"
+            f"area={problem.area_px}px\n"
+            f"bbox={problem.bbox}\n"
+            f"center={problem.centroid}"
+        )
 
     def clear_overlay(self):
         self.canvas.clear_forge_report()

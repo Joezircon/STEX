@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, Signal, QPointF, QRectF
 
 class CanvasView(QWidget):
     status_changed = Signal(str)
+    problem_selected = Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -14,6 +15,7 @@ class CanvasView(QWidget):
         self.pixmap = None
         self.image_path = None
         self.forge_report = None
+        self.selected_problem = None
 
         self.zoom = 1.0
         self.pan = QPointF(0, 0)
@@ -31,16 +33,19 @@ class CanvasView(QWidget):
 
         self.image_path = path
         self.forge_report = None
+        self.selected_problem = None
         self.reset_view()
         self._emit_status()
         return True
 
     def set_forge_report(self, report):
         self.forge_report = report
+        self.selected_problem = None
         self.update()
 
     def clear_forge_report(self):
         self.forge_report = None
+        self.selected_problem = None
         self.update()
 
     def reset_view(self):
@@ -90,13 +95,6 @@ class CanvasView(QWidget):
             self._draw_forge_overlay(painter)
 
     def _draw_image(self, painter):
-        """
-        Robust image drawing path.
-
-        Previous build used a drawPixmap QRectF overload that could fail silently
-        after packaging. This version scales explicitly and draws at an integer
-        point, which is more reliable in the Windows EXE.
-        """
         target_w = max(1, int(self.pixmap.width() * self.zoom))
         target_h = max(1, int(self.pixmap.height() * self.zoom))
 
@@ -112,7 +110,6 @@ class CanvasView(QWidget):
 
         painter.drawPixmap(x, y, scaled)
 
-        # Visible diagnostic border around the loaded image.
         image_border = QPen(QColor("#39ff14"))
         image_border.setWidth(2)
         painter.setPen(image_border)
@@ -138,14 +135,6 @@ class CanvasView(QWidget):
         painter.setPen(QColor("#39ff14"))
         painter.drawText(self.rect(), Qt.AlignCenter, "INSERT IMAGE\n\nTO BEGIN")
 
-    def _image_target_rect(self):
-        return QRectF(
-            self.pan.x(),
-            self.pan.y(),
-            self.pixmap.width() * self.zoom,
-            self.pixmap.height() * self.zoom
-        )
-
     def _draw_forge_overlay(self, painter):
         if self.forge_report is None:
             return
@@ -155,10 +144,9 @@ class CanvasView(QWidget):
         red = QColor("#ff2b2b")
         red.setAlpha(230)
 
-        pen = QPen(red)
-        pen.setWidth(max(2, int(2 * self.zoom)))
-        painter.setPen(pen)
-        painter.setBrush(Qt.NoBrush)
+        yellow = QColor("#ffff00")
+        yellow.setAlpha(255)
+
         painter.setFont(QFont("Consolas", max(10, int(14 * self.zoom)), QFont.Bold))
 
         for index, problem in enumerate(self.forge_report.problems, start=1):
@@ -166,19 +154,25 @@ class CanvasView(QWidget):
                 continue
 
             x, y, w, h = problem.bbox
+            sx = int(self.pan.x() + x * self.zoom)
+            sy = int(self.pan.y() + y * self.zoom)
+            sw = int(w * self.zoom)
+            sh = int(h * self.zoom)
 
-            sx = self.pan.x() + x * self.zoom
-            sy = self.pan.y() + y * self.zoom
-            sw = w * self.zoom
-            sh = h * self.zoom
+            is_selected = problem is self.selected_problem
 
-            painter.drawRect(int(sx), int(sy), int(sw), int(sh))
+            pen = QPen(yellow if is_selected else red)
+            pen.setWidth(max(4, int(4 * self.zoom)) if is_selected else max(2, int(2 * self.zoom)))
+            painter.setPen(pen)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(sx, sy, sw, sh)
 
             if problem.centroid:
                 cx, cy = problem.centroid
-                tx = self.pan.x() + cx * self.zoom
-                ty = self.pan.y() + cy * self.zoom
-                painter.drawText(int(tx), int(ty), str(index))
+                tx = int(self.pan.x() + cx * self.zoom)
+                ty = int(self.pan.y() + cy * self.zoom)
+                painter.setPen(yellow if is_selected else red)
+                painter.drawText(tx, ty, str(index))
 
         painter.restore()
 
@@ -207,6 +201,11 @@ class CanvasView(QWidget):
             self.dragging = True
             self.last_mouse = event.position()
             self.setCursor(Qt.ClosedHandCursor)
+            return
+
+        if event.button() == Qt.LeftButton:
+            self._select_problem_at(event.position())
+            return
 
     def mouseMoveEvent(self, event):
         if self.dragging and self.last_mouse is not None:
@@ -225,6 +224,29 @@ class CanvasView(QWidget):
             self.last_mouse = None
             self.setCursor(Qt.ArrowCursor)
 
+    def _select_problem_at(self, pos):
+        if self.forge_report is None:
+            return
+
+        ix = int((pos.x() - self.pan.x()) / self.zoom)
+        iy = int((pos.y() - self.pan.y()) / self.zoom)
+
+        for problem in reversed(self.forge_report.problems):
+            if not problem.bbox:
+                continue
+
+            x, y, w, h = problem.bbox
+            if x <= ix <= x + w and y <= iy <= y + h:
+                self.selected_problem = problem
+                self.problem_selected.emit(problem)
+                self.update()
+                self._emit_status(pos)
+                return
+
+        self.selected_problem = None
+        self.update()
+        self.status_changed.emit(f"NO ISLAND SELECTED  |  IMAGE CURSOR: {ix}, {iy}")
+
     def _emit_status(self, mouse_pos=None):
         if self.pixmap is None:
             self.status_changed.emit("READY  |  INSERT IMAGE TO START  |  ZERO ISLANDS IS THE GOAL")
@@ -241,5 +263,8 @@ class CanvasView(QWidget):
             iy = int((mouse_pos.y() - self.pan.y()) / self.zoom)
             if 0 <= ix < self.pixmap.width() and 0 <= iy < self.pixmap.height():
                 status += f"  |  CURSOR: {ix}, {iy}"
+
+        if self.selected_problem:
+            status += f"  |  SELECTED: {self.selected_problem.label}"
 
         self.status_changed.emit(status)
