@@ -2,7 +2,7 @@ from pathlib import Path
 import sys
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QPushButton, QLabel, QTextEdit, QStatusBar, QFrame,
     QFileDialog, QSplitter, QSizePolicy
 )
@@ -18,12 +18,17 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("STEX Alpha 0.11 - Forge Workshop")
+        self.setWindowTitle("STEX Alpha 0.12 - Forge Workshop")
         self.forge = ForgeEngine()
+
+        # Keep the normal native Windows title bar and controls.
+        self.setWindowFlags(Qt.Window)
 
         self.setStyleSheet("""
             QMainWindow { background-color: #090914; }
+
             QLabel { color: #39ff14; }
+
             QPushButton {
                 background-color: #111122;
                 color: #00f5ff;
@@ -31,22 +36,26 @@ class MainWindow(QMainWindow):
                 padding: 9px;
                 font-weight: bold;
             }
+
             QPushButton:hover {
                 background-color: #24113a;
                 color: #39ff14;
                 border-color: #00f5ff;
             }
+
             QTextEdit {
                 background-color: #05050c;
                 color: #39ff14;
                 border: 2px solid #00f5ff;
             }
+
             QStatusBar {
                 background-color: #05050c;
                 color: #ff2bd6;
                 min-height: 20px;
                 max-height: 24px;
             }
+
             QSplitter::handle {
                 background-color: #ff2bd6;
                 width: 4px;
@@ -79,6 +88,7 @@ class MainWindow(QMainWindow):
         self.splitter.setCollapsible(0, False)
         self.splitter.setCollapsible(1, False)
         self.splitter.setCollapsible(2, True)
+
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 10)
         self.splitter.setStretchFactor(2, 3)
@@ -91,21 +101,19 @@ class MainWindow(QMainWindow):
         )
         self.setStatusBar(status)
 
-        QTimer.singleShot(0, self._fit_to_available_desktop)
+        # Do not force the outer window geometry.
+        # Let Windows maximize the native frame normally, then size only
+        # the internal splitter after the window is visible.
+        self.resize(1500, 860)
+        QTimer.singleShot(150, self._initialize_panel_layout)
 
-    def _fit_to_available_desktop(self):
-        screen = self.screen() or QApplication.primaryScreen()
-        if screen is None:
-            self.resize(1500, 860)
-            return
+    def _initialize_panel_layout(self):
+        total = max(1, self.splitter.width())
 
-        area = screen.availableGeometry()
-        self.setGeometry(area)
+        left = max(230, min(300, int(total * 0.18)))
+        forge = max(280, min(440, int(total * 0.22)))
+        canvas = max(420, total - left - forge)
 
-        width = area.width()
-        left = max(230, min(300, int(width * 0.18)))
-        forge = max(280, min(440, int(width * 0.22)))
-        canvas = max(420, width - left - forge - 24)
         self.splitter.setSizes([left, canvas, forge])
 
     def _app_root(self):
@@ -139,15 +147,15 @@ class MainWindow(QMainWindow):
         subtitle.setFont(QFont("Consolas", 9))
         subtitle.setStyleSheet("color: #00f5ff;")
 
-        buttons = {
-            "INSERT IMAGE": self.insert_image,
-            "RESET VIEW": self.canvas.reset_view,
-            "TOPOLOGY CHECK": self.topology_check,
-            "ZOOM SELECTED": self.zoom_selected,
-            "CLEAR OVERLAY": self.clear_overlay,
-            "TOGGLE FORGE": self.toggle_forge,
-            "EXPORT": lambda: self._log("EXPORT selected. Export comes later.")
-        }
+        button_specs = [
+            ("INSERT IMAGE", self.insert_image),
+            ("RESET VIEW", self.canvas.reset_view),
+            ("TOPOLOGY CHECK", self.topology_check),
+            ("ZOOM SELECTED", self.zoom_selected),
+            ("CLEAR OVERLAY", self.clear_overlay),
+            ("TOGGLE FORGE", self.toggle_forge),
+            ("EXPORT", lambda: self._log("EXPORT selected. Export comes later.")),
+        ]
 
         self.log = QTextEdit()
         self.log.setReadOnly(True)
@@ -165,13 +173,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(subtitle)
         layout.addSpacing(8)
 
-        for label, callback in buttons.items():
+        for label, callback in button_specs:
             button = QPushButton(label)
             button.clicked.connect(callback)
             layout.addWidget(button)
 
         layout.addSpacing(8)
         layout.addWidget(self.log, 1)
+
         return panel
 
     def toggle_forge(self):
@@ -185,13 +194,17 @@ class MainWindow(QMainWindow):
             self.splitter.setSizes([left, max(420, total - left), 0])
         else:
             forge = max(280, min(440, int(total * 0.22)))
-            self.splitter.setSizes([left, max(420, total - left - forge), forge])
+            canvas = max(420, total - left - forge)
+            self.splitter.setSizes([left, canvas, forge])
 
     def insert_image(self):
         filename, _ = QFileDialog.getOpenFileName(
-            self, "Insert Image", "",
+            self,
+            "Insert Image",
+            "",
             "Images (*.png *.jpg *.jpeg *.bmp);;All Files (*)"
         )
+
         if not filename:
             return
 
